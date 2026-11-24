@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="assets/umay/plane.png" />
   <link rel="icon" type="image/png" href="assets/umay/plane.png" />
 
-  <link rel="stylesheet" href="css/style.css?v=202606" />
+  <link rel="stylesheet" href="css/style.css?v=202607" />
   <style>
     /* On-Screen 3D Walking / Car / Horse Driving Pad */
     .drive-pad {
@@ -173,8 +173,14 @@
           <span>💬</span>
           <span class="chat-badge" id="chat-unread">Yeni</span>
         </button>
+        <button class="panel-close-x" id="btn-collapse-topbar" onclick="toggleTopNavBar(true)" title="Üst Menüyü Gizle">▲</button>
       </div>
     </header>
+
+    <!-- FLOATING RE-OPEN TOP BAR BUTTON (Visible when Top Bar is collapsed!) -->
+    <button id="reopen-topbar-btn" onclick="toggleTopNavBar(false)" style="display:none;position:fixed;top:6px;right:8px;z-index:260;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;border:2px solid #fff;border-radius:999px;padding:5px 12px;font-family:inherit;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.3);">
+      ▼ Menü
+    </button>
 
     <!-- MAIN STAGE -->
     <main class="stage-container">

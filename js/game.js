@@ -3443,8 +3443,8 @@ function renderArcadeRibbon() {
     btn.textContent = `${g.icon} ${g.name}`;
     btn.onclick = () => {
       openArcadeGame(g.id, btn);
-      // On phones, fold the game list automatically after picking a game so the game gets the FULL screen!
-      if (window.innerWidth <= 860) window.toggleArcadeGameList(true);
+      // On phones (portrait OR landscape!), fold the game list automatically after picking a game so the game gets the FULL screen!
+      if (window.innerWidth <= 860 || window.innerHeight <= 520) window.toggleArcadeGameList(true);
     };
     ribbon.appendChild(btn);
   });
@@ -4042,11 +4042,29 @@ window.toggleArcadeGameList = function(forceCollapse = null) {
   playSound('pop');
 };
 
+window.toggleTopNavBar = function(forceCollapse = null) {
+  const bar = document.querySelector('.top-bar');
+  const btn = document.getElementById('reopen-topbar-btn');
+  if (!bar) return;
+  const next = forceCollapse !== null ? forceCollapse : !bar.classList.contains('collapsed');
+  bar.classList.toggle('collapsed', next);
+  if (btn) btn.style.display = next ? 'block' : 'none';
+  playSound('pop');
+  // Resize 3D WebGL renderer smoothly when top bar opens/closes!
+  setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 40);
+};
+
+let lastDeviceCategory = null;
 function applyAutoDeviceLayout() {
   const w = window.innerWidth;
-  const isPhone = w <= 860;
-  document.body.dataset.device = isPhone ? 'phone' : (w <= 1120 ? 'tablet' : 'desktop');
-  // On phones, start with ALL 3D panels (sidebar, drive-pad, top/bottom bars) cleanly COLLAPSED so nothing overlaps!
+  const h = window.innerHeight;
+  // Detect BOTH Portrait Phone (w <= 860) AND Landscape Phone (h <= 520)!
+  const isPhone = (w <= 860 || h <= 520);
+  const cat = isPhone ? (w > h ? 'phone-landscape' : 'phone-portrait') : (w <= 1120 ? 'tablet' : 'desktop');
+  document.body.dataset.device = cat;
+  if (cat === lastDeviceCategory) return; // Don't re-collapse panels the user intentionally opened!
+  lastDeviceCategory = cat;
+  // On phones (portrait or landscape), start with ALL 3D panels cleanly COLLAPSED so nothing overlaps!
   document.querySelectorAll('.hud-sidebar').forEach(sb => sb.classList.toggle('collapsed', isPhone));
   drivePadCollapsed = isPhone;
   hudBarsHidden = isPhone;

@@ -60,8 +60,9 @@ export function launch3DMiniGame(gameId, container, helpers) {
   hudTop.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:860px;flex-wrap:wrap;gap:8px;background:rgba(255,255,255,0.92);padding:8px 14px;border-radius:18px;border:3px solid #f472b6;';
   wrapper.appendChild(hudTop);
 
-  const isMobile = window.innerWidth < 760;
-  const h = isMobile ? 255 : 360;
+  const isLandscapePhone = window.innerHeight <= 520;
+  const isMobile = window.innerWidth < 760 || isLandscapePhone;
+  const h = isLandscapePhone ? Math.max(155, window.innerHeight - 185) : (isMobile ? 255 : 360);
   const canvasHost = document.createElement('div');
   canvasHost.style.cssText = `width:100%;max-width:860px;height:${h}px;border-radius:18px;overflow:hidden;border:3px solid #fff;box-shadow:0 14px 30px rgba(0,0,0,0.2);position:relative;background:#0f172a;touch-action:none;`;
   wrapper.appendChild(canvasHost);
