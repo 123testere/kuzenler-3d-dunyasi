@@ -1,0 +1,5 @@
+node_modules/
+ngrok.exe
+ngrok.zip
+BASLAT_CANLI_LINK.bat
+*.log

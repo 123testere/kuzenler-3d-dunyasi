@@ -1,0 +1,18 @@
+{
+  "name": "Kuzenler Dünyası: Umay, Yusuf, Deren & Elif",
+  "short_name": "Kuzenler Oyunu",
+  "description": "Umay, Yusuf, Deren ve Elif için özel tasarlanmış oda düzenleme, bebek giydirme, çiftlik bakımı ve birlikte oynama dünyası!",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#FFF0F6",
+  "theme_color": "#FF6B9D",
+  "icons": [
+    {
+      "src": "assets/umay/plane.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

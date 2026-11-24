@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: kuzenler-3d-dunyasi
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true

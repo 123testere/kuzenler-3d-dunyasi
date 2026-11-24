@@ -1,0 +1,13 @@
+{
+  "name": "kuzenler-3d-dunyasi",
+  "version": "1.0.0",
+  "description": "3D Kuzenler Dünyası: Umay, Yusuf, Deren & Elif",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "three": "^0.187.0"
+  }
+}
