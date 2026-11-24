@@ -92,7 +92,10 @@ const server = http.createServer((req, res) => {
     }
     const ext = path.extname(filePath).toLowerCase();
     const mime = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': mime });
+    res.writeHead(200, {
+      'Content-Type': mime,
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    });
     fs.createReadStream(filePath).pipe(res);
   });
 });

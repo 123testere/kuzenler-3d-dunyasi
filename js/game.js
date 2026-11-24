@@ -1054,7 +1054,7 @@ const ROOM_3D_CATALOG = [
   { id: 'tv_3d',         name: '3D Dev Ekran TV',        cat: 'furniture', icon: 'assets/sprites/music.png',   type: 'mesh_tv', tint: '#334155' },
   { id: 'gaming_desk',   name: '3D Oyuncu Masası & PC',  cat: 'furniture', icon: 'assets/sprites/star.png',    type: 'mesh_gaming_desk', special: true, tint: '#a855f7' },
   { id: 'bookshelf_3d',  name: '3D Renkli Kitaplık',     cat: 'furniture', icon: 'assets/sprites/sparkles.png',type: 'mesh_bookshelf', tint: '#b45309' },
-  { id: 'dining_3d',     name: '3D Yemek Masası & Pasta',cat: 'furniture', icon: 'assets/sprites/cake.png',    type: 'mesh_dining_table', tint: '#f472b6' },
+  { id: 'dining_3d',     name: '3D Yemek Masası & Pasta',cat: 'furniture', icon: 'assets/sprites/apple.png',   type: 'mesh_dining_table', tint: '#f472b6' },
   { id: 'kitchen_3d',    name: '3D Mutfak & Buzdolabı',  cat: 'furniture', icon: 'assets/sprites/apple.png',   type: 'mesh_kitchen', tint: '#f472b6' },
   { id: 'piano_3d',      name: '3D Kuyruklu Piyano',     cat: 'furniture', icon: 'assets/sprites/music.png',   type: 'mesh_piano', special: true, tint: '#111827' },
   { id: 'dollhouse_3d',  name: '3D Prenses Bebek Evi',   cat: 'furniture', icon: 'assets/sprites/crown.png',   type: 'mesh_dollhouse', special: true, tint: '#ec4899' },
@@ -1112,7 +1112,7 @@ const ROOM_3D_CATALOG = [
     { base: 'piano',    name: '3D Kuyruklu Piyano',    cat: 'furniture', type: 'mesh_piano',       icon: 'assets/sprites/music.png',     cols: ['pink','purple','white','gold'] },
     { base: 'dollh',    name: '3D Bebek Evi',          cat: 'furniture', type: 'mesh_dollhouse',   icon: 'assets/sprites/crown.png',     cols: ['purple','cyan','gold'] },
     { base: 'kitchen',  name: '3D Mutfak Seti',        cat: 'furniture', type: 'mesh_kitchen',     icon: 'assets/sprites/apple.png',     cols: ['blue','green','gold'] },
-    { base: 'dining',   name: '3D Yemek Masası',       cat: 'furniture', type: 'mesh_dining_table',icon: 'assets/sprites/cake.png',      cols: ['purple','cyan','green'] },
+    { base: 'dining',   name: '3D Yemek Masası',       cat: 'furniture', type: 'mesh_dining_table',icon: 'assets/sprites/apple.png',     cols: ['purple','cyan','green'] },
     { base: 'lamp',     name: '3D Gece Lambası',       cat: 'furniture', type: 'mesh_lamp',        icon: 'assets/sprites/star.png',      cols: ['pink','purple','cyan'] },
     { base: 'pool',     name: '3D Yüzme Havuzu',       cat: 'garden',    type: 'mesh_pool',        icon: 'assets/sprites/sparkles.png',  cols: ['pink','purple','green'] },
     { base: 'tramp',    name: '3D Trambolin',          cat: 'garden',    type: 'mesh_trampoline',  icon: 'assets/sprites/balloon.png',   cols: ['pink','green','red'] },
@@ -3958,13 +3958,13 @@ window.selectCousin = function(id, viaNameForm = false) {
   const navArcLbl = document.getElementById('nav-arcade-label');
   if (c.age === 3) {
     if (bigBtn) bigBtn.style.display = 'none';
-    if (todBtn) { todBtn.style.display = 'inline-flex'; todBtn.textContent = `👶 ${c.name}'in 20 Özel 3 Yaş Oyunu!`; }
-    if (navArcLbl) navArcLbl.textContent = '20 Oyun (3 Yaş)';
+    if (todBtn) { todBtn.style.display = 'inline-flex'; todBtn.textContent = `👶 ${c.name} (20 Oyun)`; }
+    if (navArcLbl) navArcLbl.textContent = '20 Oyun';
     window.switchArcadeCategory('toddler', true);
   } else {
     if (todBtn) todBtn.style.display = 'none';
-    if (bigBtn) { bigBtn.style.display = 'inline-flex'; bigBtn.textContent = `👧👦 Umay & Yusuf Oyun Alanı (27 Oyun — 3D Satranç, Ateş&Su, 2P Yarış, Kartopu!)`; }
-    if (navArcLbl) navArcLbl.textContent = 'Oyun Alanı (27)';
+    if (bigBtn) { bigBtn.style.display = 'inline-flex'; bigBtn.textContent = `👧👦 8 Yaş (27 Oyun)`; }
+    if (navArcLbl) navArcLbl.textContent = 'Oyunlar (27)';
     window.switchArcadeCategory('big', true);
   }
   document.getElementById('label-yusuf-farm').textContent = (c.id === 'yusuf') ? '3D Çiftlik' : '🔒 Çiftlik';
@@ -4046,11 +4046,13 @@ function applyAutoDeviceLayout() {
   const w = window.innerWidth;
   const isPhone = w <= 860;
   document.body.dataset.device = isPhone ? 'phone' : (w <= 1120 ? 'tablet' : 'desktop');
-  // Automatically start with clutter-free collapsed sidebars & drive-pad on phones, open on tablet/PC!
+  // On phones, start with ALL 3D panels (sidebar, drive-pad, top/bottom bars) cleanly COLLAPSED so nothing overlaps!
   document.querySelectorAll('.hud-sidebar').forEach(sb => sb.classList.toggle('collapsed', isPhone));
   drivePadCollapsed = isPhone;
+  hudBarsHidden = isPhone;
   const pad = document.getElementById('drive-pad');
   if (pad) pad.classList.toggle('collapsed', drivePadCollapsed);
+  document.querySelectorAll('.hud-screen').forEach(s => s.classList.toggle('hud-bars-hidden', hudBarsHidden));
   updateFloatingDockVisibility();
 }
 
