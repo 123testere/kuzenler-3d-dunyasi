@@ -27,7 +27,7 @@ html, body {
   font-family: 'Fredoka', 'Nunito', sans-serif;
   background: #0f172a;
   color: #1e293b;
-  touch-action: none;
+  touch-action: manipulation;
 }
 
 #app {
@@ -198,6 +198,61 @@ html, body {
   width: 100%;
   height: 100%;
   z-index: 1;
+  touch-action: none;
+}
+
+/* Universal Collapsible Panels & Floating Toggle Pills */
+.panel-close-x {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 2px solid #fca5a5;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hud-sidebar.collapsed {
+  display: none !important;
+}
+.hud-bars-hidden .hud-top-bar,
+.hud-bars-hidden .hud-bottom-bar {
+  display: none !important;
+}
+.floating-panel-dock {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 75;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+}
+.dock-pill-btn {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dock-pill-btn.alt {
+  background: linear-gradient(135deg, #0ea5e9, #10b981);
+}
+.dock-pill-btn.dark {
+  background: rgba(30, 41, 59, 0.9);
+}
+.drive-pad.collapsed {
+  display: none !important;
 }
 
 /* HUD Overlays per 3D Mode */
@@ -443,56 +498,69 @@ html, body {
 .full-overlay-screen {
   position: absolute;
   inset: 0;
-  z-index: 25;
-  background: linear-gradient(135deg, rgba(254,243,199,0.92), rgba(252,231,243,0.94), rgba(224,242,254,0.94));
+  z-index: 90;
+  background: linear-gradient(135deg, rgba(254,243,199,0.96), rgba(252,231,243,0.97), rgba(224,242,254,0.97));
   backdrop-filter: blur(8px);
   display: none;
-  padding: 16px;
+  padding: 12px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 .full-overlay-screen.active {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 /* Arcade Sub-Game Tabs */
 .arcade-nav {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 14px;
+  justify-content: flex-start;
+  gap: 7px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
+  flex-shrink: 0;
+  width: 100%;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+.arcade-nav.collapsed {
+  display: none !important;
 }
 .arcade-tab-btn {
-  padding: 10px 20px;
-  border-radius: 20px;
-  border: 3px solid #fff;
+  padding: 8px 14px;
+  border-radius: 16px;
+  border: 2px solid #cbd5e1;
   background: #fff;
   font-family: inherit;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.1);
-  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: all 0.16s;
+  flex-shrink: 0;
 }
 .arcade-tab-btn.active {
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: #fff;
-  transform: scale(1.06);
+  border-color: #fff;
+  transform: scale(1.03);
 }
 
 .arcade-panel {
   display: none;
-  flex: 1;
-  background: rgba(255,255,255,0.95);
-  border-radius: 30px;
-  border: 5px solid #fff;
+  flex: 1 0 auto;
+  min-height: 300px;
+  background: rgba(255,255,255,0.96);
+  border-radius: 24px;
+  border: 4px solid #fff;
   box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-  padding: 18px;
+  padding: 14px;
   align-items: center;
-  justify-content: space-around;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 14px;
 }
 .arcade-panel.active {
   display: flex;
@@ -1058,15 +1126,32 @@ canvas {
   }
 
   /* 6. Arcade, 3D Chess, XOX, Memory & Full-Screen 3D Games on Phones */
-  .full-overlay-screen { padding: 8px; }
-  .arcade-nav { gap: 5px; margin-bottom: 8px; max-height: 76px !important; }
-  .arcade-tab-btn { padding: 5px 9px !important; font-size: 11.5px !important; border-radius: 12px; }
-  .arcade-panel { padding: 10px 8px; border-radius: 18px; border-width: 3px; gap: 10px; }
+  .full-overlay-screen { padding: 8px 6px 26px; }
+  .arcade-nav {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    padding: 4px !important;
+    background: rgba(255,255,255,0.85);
+    border-radius: 16px;
+    border: 2px solid #fbcfe8;
+  }
+  .arcade-tab-btn {
+    padding: 8px 6px !important;
+    font-size: 11.5px !important;
+    border-radius: 12px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  .arcade-panel { padding: 10px 6px; border-radius: 16px; border-width: 3px; gap: 8px; width: 100%; }
   #chess-board-grid {
     grid-template-columns: repeat(8, 38px) !important;
     grid-template-rows: repeat(8, 38px) !important;
     border-width: 6px !important;
-    transform: rotateX(14deg) !important;
+    transform: rotateX(12deg) !important;
   }
   #chess-board-grid > div { width: 38px !important; height: 38px !important; }
   #chess-board-grid > div > div { width: 32px !important; height: 32px !important; font-size: 24px !important; }

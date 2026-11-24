@@ -3441,7 +3441,11 @@ function renderArcadeRibbon() {
     btn.style.cssText = 'padding:6px 11px;font-size:12.5px;';
     btn.dataset.gid = g.id;
     btn.textContent = `${g.icon} ${g.name}`;
-    btn.onclick = () => openArcadeGame(g.id, btn);
+    btn.onclick = () => {
+      openArcadeGame(g.id, btn);
+      // On phones, fold the game list automatically after picking a game so the game gets the FULL screen!
+      if (window.innerWidth <= 860) window.toggleArcadeGameList(true);
+    };
     ribbon.appendChild(btn);
   });
 }
@@ -3971,6 +3975,85 @@ window.selectCousin = function(id, viaNameForm = false) {
 
 window.openCharacterModal = () => { playSound('pop'); document.getElementById('character-modal').classList.remove('hidden'); };
 
+// UNIVERSAL COLLAPSIBLE PANELS & AUTO DEVICE RESPONSIVE LAYOUT (PHONE / TABLET / PC!)
+let drivePadCollapsed = false;
+let hudBarsHidden = false;
+
+function updateFloatingDockVisibility() {
+  const dock = document.getElementById('floating-panel-dock');
+  if (!dock) return;
+  const mode = state.currentMode;
+  if (mode === 'arcade') {
+    dock.style.display = 'none';
+    return;
+  }
+  dock.style.display = 'flex';
+  const hasSidebar = ['rooms', 'salon', 'yusuf-farm', 'nursery'].includes(mode);
+  const hasPad = ['map', 'yusuf-farm', 'lunapark'].includes(mode);
+  const sbBtn = document.getElementById('dock-btn-sidebar');
+  const padBtn = document.getElementById('dock-btn-pad');
+  const barBtn = document.getElementById('dock-btn-bars');
+  if (sbBtn) {
+    sbBtn.style.display = hasSidebar ? 'inline-flex' : 'none';
+    const sb = document.querySelector(`#hud-${mode} .hud-sidebar`);
+    const isClosed = sb ? sb.classList.contains('collapsed') : false;
+    sbBtn.textContent = isClosed ? '📦 Menüyü Aç' : '📦 Menüyü Kapat';
+  }
+  if (padBtn) {
+    padBtn.style.display = hasPad ? 'inline-flex' : 'none';
+    padBtn.textContent = drivePadCollapsed ? '🕹️ Kumanda Aç' : '🕹️ Kumanda Kapat';
+  }
+  if (barBtn) {
+    barBtn.textContent = hudBarsHidden ? '👁️ Barları Göster' : '👁️ Barları Gizle';
+  }
+}
+
+window.toggleActiveSidebar = function(forceCollapse = null) {
+  const sb = document.querySelector(`#hud-${state.currentMode} .hud-sidebar`);
+  if (!sb) return;
+  const next = forceCollapse !== null ? forceCollapse : !sb.classList.contains('collapsed');
+  sb.classList.toggle('collapsed', next);
+  playSound('pop');
+  updateFloatingDockVisibility();
+};
+
+window.toggleDrivePadCollapsed = function(forceCollapse = null) {
+  drivePadCollapsed = forceCollapse !== null ? forceCollapse : !drivePadCollapsed;
+  const pad = document.getElementById('drive-pad');
+  if (pad) pad.classList.toggle('collapsed', drivePadCollapsed);
+  playSound('pop');
+  updateFloatingDockVisibility();
+};
+
+window.toggleHudBars = function(forceHide = null) {
+  hudBarsHidden = forceHide !== null ? forceHide : !hudBarsHidden;
+  document.querySelectorAll('.hud-screen').forEach(s => s.classList.toggle('hud-bars-hidden', hudBarsHidden));
+  playSound('pop');
+  updateFloatingDockVisibility();
+};
+
+window.toggleArcadeGameList = function(forceCollapse = null) {
+  const rib = document.getElementById('arcade-games-ribbon');
+  const btn = document.getElementById('arcade-list-toggle-btn');
+  if (!rib) return;
+  const next = forceCollapse !== null ? forceCollapse : !rib.classList.contains('collapsed');
+  rib.classList.toggle('collapsed', next);
+  if (btn) btn.textContent = next ? '🎮 Oyun Listesini Aç ▼' : '🎮 Oyun Listesini Kapat ▲';
+  playSound('pop');
+};
+
+function applyAutoDeviceLayout() {
+  const w = window.innerWidth;
+  const isPhone = w <= 860;
+  document.body.dataset.device = isPhone ? 'phone' : (w <= 1120 ? 'tablet' : 'desktop');
+  // Automatically start with clutter-free collapsed sidebars & drive-pad on phones, open on tablet/PC!
+  document.querySelectorAll('.hud-sidebar').forEach(sb => sb.classList.toggle('collapsed', isPhone));
+  drivePadCollapsed = isPhone;
+  const pad = document.getElementById('drive-pad');
+  if (pad) pad.classList.toggle('collapsed', drivePadCollapsed);
+  updateFloatingDockVisibility();
+}
+
 window.switchMode = function(mode) {
   state.currentMode = mode;
   playSound('pop');
@@ -3981,9 +4064,15 @@ window.switchMode = function(mode) {
   const targetHud = document.getElementById(`hud-${mode}`);
   if (targetHud) targetHud.classList.add('active');
 
+  if (mode === 'arcade') {
+    // Always open the game list when entering Arcade so all games are immediately visible & clickable!
+    window.toggleArcadeGameList(false);
+  }
+
   Object.keys(worldGroups).forEach(k => worldGroups[k].visible = (k === mode));
   attachExplorerToActiveWorld();
   setCameraForMode(mode);
+  updateFloatingDockVisibility();
 };
 
 function updateInventoryUI() {
@@ -4131,6 +4220,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initChatDrawPad();
   initDragBabyCareAndAutonomousLoops();
   updateInventoryUI();
+  applyAutoDeviceLayout();
+  window.addEventListener('resize', applyAutoDeviceLayout);
 
   // Connect to Live LAN/Wi-Fi Server-Sent Events (/api/events) so 2 tablets play together live!
   if ('EventSource' in window) {

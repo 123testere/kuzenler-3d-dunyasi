@@ -182,9 +182,19 @@
       <!-- SHARED 3D WEBGL VIEWPORT -->
       <div id="webgl-container"></div>
 
+      <!-- UNIVERSAL COLLAPSIBLE PANEL DOCK (OPEN/CLOSE MENU, DRIVE PAD & HUD BARS!) -->
+      <div id="floating-panel-dock" class="floating-panel-dock">
+        <button class="dock-pill-btn" id="dock-btn-sidebar" onclick="toggleActiveSidebar()">📦 Menü Aç / Kapat</button>
+        <button class="dock-pill-btn alt" id="dock-btn-pad" onclick="toggleDrivePadCollapsed()">🕹️ Kumanda</button>
+        <button class="dock-pill-btn dark" id="dock-btn-bars" onclick="toggleHudBars()">👁️ Barlar</button>
+      </div>
+
       <!-- ON-SCREEN 3D WALK / DRIVE CAR / RIDE HORSE & CARRY ITEMS PAD -->
       <div id="drive-pad" class="drive-pad">
-        <div style="font-size:11px;font-weight:900;color:#be185d;" id="drive-pad-status">🚶 Karakteri Gezdir & Taşı</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:6px;">
+          <div style="font-size:11px;font-weight:900;color:#be185d;" id="drive-pad-status">🚶 Karakteri Gezdir</div>
+          <button class="panel-close-x" onclick="toggleDrivePadCollapsed(true)" title="Kumandayı Kapat">✖</button>
+        </div>
         <div class="dpad-row">
           <button class="dpad-btn" onpointerdown="setMoveKey('up',true)" onpointerup="setMoveKey('up',false)" onpointerleave="setMoveKey('up',false)">⬆️</button>
         </div>
@@ -243,6 +253,7 @@
         <aside class="hud-sidebar">
           <div class="sidebar-header">
             <span id="room-owner-title">🛋️ Umay'ın 3D Odası</span>
+            <button class="panel-close-x" onclick="toggleActiveSidebar(true)">✖ Kapat</button>
           </div>
           <!-- Switch Between All 4 Cousins' Private Rooms -->
           <div class="tab-pills" id="room-owner-tabs">
@@ -295,7 +306,10 @@
       <!-- HUD 3: 3D HAND-PAINTED MAKEUP, HAIR DYE, DRESS-UP & COMPANION PET DRESS-UP -->
       <section id="hud-salon" class="hud-screen">
         <aside class="hud-sidebar">
-          <div class="sidebar-header"><span>💄 Elle Makyaj, Saç & Canlı</span></div>
+          <div class="sidebar-header">
+            <span>💄 Elle Makyaj, Saç & Canlı</span>
+            <button class="panel-close-x" onclick="toggleActiveSidebar(true)">✖ Kapat</button>
+          </div>
           <div class="tab-pills">
             <button class="tab-pill active" id="salon-char-umay" onclick="switchSalonModel('umay')">👧 Umay</button>
             <button class="tab-pill" id="salon-char-yusuf" onclick="switchSalonModel('yusuf')">👦 Yusuf</button>
@@ -334,6 +348,7 @@
         <aside class="hud-sidebar" style="border-color:#34d399;">
           <div class="sidebar-header" style="color:#065f46;">
             <span id="farm-owner-title">🚜 3D Kuzen Çiftliği</span>
+            <button class="panel-close-x" onclick="toggleActiveSidebar(true)">✖ Kapat</button>
           </div>
           <!-- Switch Between All 4 Cousins' Farms -->
           <div class="tab-pills">
@@ -406,6 +421,7 @@
         <aside class="hud-sidebar">
           <div class="sidebar-header">
             <span id="baby-wardrobe-title">👶 Bebek Giydir (22 Ürün)</span>
+            <button class="panel-close-x" onclick="toggleActiveSidebar(true)">✖ Kapat</button>
           </div>
           <div class="tab-pills" id="baby-dress-tabs">
             <button class="tab-pill active" onclick="filterBabyWardrobe('all', this)">Tümü (22)</button>
@@ -454,18 +470,21 @@
 
       <!-- SCREEN 7: 41 MINI-GAMES ARCADE (3D CHESS + 20 BIG GAMES + 20 DEREN & ELIF 3-YEAR-OLD GAMES!) -->
       <section id="hud-arcade" class="full-overlay-screen">
-        <!-- Category Toggle: Big Kids (27 Games) vs Deren & Elif 3-Year-Old (20 Games) — STRICTLY LOCKED BY AGE! -->
-        <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
-          <button class="hud-btn active" id="cat-big-btn" style="font-size:14.5px;padding:9px 16px;" onclick="switchArcadeCategory('big')">
-            👧👦 Umay & Yusuf 8 Yaş Oyunları (27 Oyun — Ateş&Su, 2P Yarış, Satranç, Kartopu!)
+        <!-- Category Toggle + Collapsible Game List Button (100% Visible & Clickable on Phones!) -->
+        <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;flex-shrink:0;">
+          <button class="hud-btn active" id="arcade-list-toggle-btn" style="font-size:13px;padding:7px 13px;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;border-color:#fff;" onclick="toggleArcadeGameList()">
+            🎮 Oyun Listesi (Aç / Kapat)
           </button>
-          <button class="hud-btn" id="cat-toddler-btn" style="font-size:14.5px;padding:9px 16px;background:#fef3c7;border-color:#f59e0b;color:#92400e;" onclick="switchArcadeCategory('toddler')">
-            👶 Deren & Elif Özel 3 Yaş Dünyası (20 Sesli Oyun!)
+          <button class="hud-btn active" id="cat-big-btn" style="font-size:12.5px;padding:7px 12px;" onclick="switchArcadeCategory('big')">
+            👧👦 Umay & Yusuf (27 Oyun)
+          </button>
+          <button class="hud-btn" id="cat-toddler-btn" style="font-size:12.5px;padding:7px 12px;background:#fef3c7;border-color:#f59e0b;color:#92400e;" onclick="switchArcadeCategory('toddler')">
+            👶 Deren & Elif (20 Oyun)
           </button>
         </div>
 
-        <!-- Dynamic Game Selector Ribbon -->
-        <div class="arcade-nav" id="arcade-games-ribbon" style="gap:5px;max-height:94px;overflow-y:auto;padding:4px;"></div>
+        <!-- Dynamic Game Selector Ribbon (Always flex-shrink:0 & scrollable!) -->
+        <div class="arcade-nav" id="arcade-games-ribbon"></div>
 
         <!-- GAME 1: REAL RULES 3D CHESS -->
         <div id="arcade-sub-chess3d" class="arcade-panel active" style="background:rgba(255,255,255,0.92);">
