@@ -33,6 +33,7 @@ html, body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -185,9 +186,9 @@ html, body {
 /* Main Stage & Shared 3D Canvas */
 .stage-container {
   flex: 1;
+  min-height: 0;
   position: relative;
   width: 100%;
-  height: calc(100vh - 70px);
   overflow: hidden;
 }
 
@@ -871,4 +872,220 @@ html, body {
   z-index: 999;
   font-size: 32px;
   animation: float-up-fade 1.1s ease-out forwards;
+}
+
+/* ============================================================================
+   MOBILE PHONE & SMALL TABLET RESPONSIVE LAYOUT (NO OVERLAPS!)
+   ============================================================================ */
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 860px) {
+  /* 1. Clean 2-Row Mobile Top Bar */
+  .top-bar {
+    height: auto;
+    min-height: 54px;
+    padding: 5px 8px;
+    gap: 5px;
+    flex-wrap: wrap;
+    border-bottom-width: 3px;
+  }
+  .player-badge {
+    order: 1;
+    padding: 3px 8px;
+    gap: 6px;
+    border-width: 2px;
+  }
+  .player-badge .avatar-circle { width: 28px; height: 28px; }
+  .player-badge .player-name { font-size: 12px; }
+  .player-badge .player-age { font-size: 9px; }
+
+  .top-actions {
+    order: 2;
+    gap: 4px;
+    margin-left: auto;
+    flex-wrap: nowrap;
+  }
+  #online-cousins-pill {
+    display: none !important; /* Hide verbose online list on tiny screens to save space */
+  }
+  .inventory-pill {
+    padding: 3px 7px;
+    gap: 5px;
+    font-size: 11px;
+    border-width: 2px;
+  }
+  .voice-rec-btn {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    border-radius: 10px !important;
+  }
+  .chat-toggle-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-width: 2px;
+    border-radius: 12px;
+  }
+  .chat-badge { display: none; }
+
+  .nav-tabs {
+    order: 3;
+    flex-basis: 100%;
+    width: 100%;
+    gap: 4px;
+    padding: 2px 0 3px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+    border-radius: 11px;
+    flex-shrink: 0;
+  }
+  .nav-btn img, .nav-btn span.icon { width: 15px; height: 15px; font-size: 13px; }
+
+  /* 2. Login Modal: Scrollable from top on mobile */
+  .character-modal {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 14px 10px 30px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .welcome-title { font-size: 20px; margin-bottom: 4px; }
+  .welcome-subtitle { font-size: 12.5px; margin-bottom: 10px; }
+  #login-name-input { min-width: 180px !important; width: 100%; font-size: 14px !important; padding: 8px 12px !important; }
+  .cousin-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .cousin-card { padding: 10px 8px; border-radius: 18px; border-width: 3px; gap: 4px; }
+  .cousin-avatar { width: 54px; height: 54px; }
+  .cousin-name { font-size: 16px; }
+  .cousin-role { font-size: 10.5px; line-height: 1.2; }
+  .cousin-age-tag { font-size: 9px; padding: 2px 6px; top: 6px; right: 6px; }
+
+  /* 3. 3D Mode Sidebars -> Sleek Bottom Drawer on Phones! */
+  .hud-sidebar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 33%;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    border-width: 3px 0 0 0;
+    padding: 7px 9px;
+    gap: 5px;
+    z-index: 30;
+  }
+  .sidebar-header { font-size: 13px; padding-bottom: 2px; }
+  .tab-pills { flex-wrap: nowrap; overflow-x: auto; gap: 4px; padding-bottom: 2px; flex-shrink: 0; }
+  .tab-pill { flex: 0 0 auto; padding: 4px 8px; font-size: 10.5px; border-radius: 10px; min-width: auto; }
+  .item-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .item-card { padding: 5px 3px; border-radius: 12px; border-width: 2px; gap: 2px; }
+  .item-card img { width: 32px; height: 32px; }
+  .item-card .title { font-size: 9.5px; line-height: 1.1; }
+  .color-swatch { width: 24px !important; height: 24px !important; }
+
+  /* 4. Floating Top & Bottom Bars: Single Horizontal Scroll Strips (Zero Overlap!) */
+  .hud-top-bar {
+    top: 6px;
+    left: 6px !important;
+    right: 6px;
+    gap: 5px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hud-group {
+    padding: 5px 8px;
+    border-radius: 14px;
+    border-width: 2px;
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hud-group > * { flex-shrink: 0; }
+  .hud-btn {
+    padding: 5px 9px;
+    font-size: 11px;
+    border-radius: 11px;
+    white-space: nowrap;
+  }
+
+  /* Bottom bar sits right above the 33% drawer on sidebar screens */
+  .hud-bottom-bar {
+    left: 6px !important;
+    right: 6px;
+    bottom: calc(33% + 6px);
+    justify-content: flex-start;
+  }
+  #hud-map .hud-bottom-bar,
+  #hud-lunapark .hud-bottom-bar {
+    bottom: 8px;
+  }
+  .farm-status-banner {
+    padding: 5px 10px;
+    gap: 8px;
+    overflow-x: auto;
+    max-width: 100%;
+    border-radius: 14px;
+  }
+  .mini-bar { width: 42px; height: 8px; }
+  #farm-proximity-bar {
+    bottom: calc(33% + 52px) !important;
+    padding: 6px 12px !important;
+    font-size: 11.5px !important;
+    max-width: 94vw;
+  }
+
+  /* 5. Compact On-Screen Drive Pad on Phones */
+  .drive-pad {
+    bottom: 54px !important;
+    right: 6px !important;
+    padding: 6px !important;
+    border-radius: 16px !important;
+    transform: scale(0.78);
+    transform-origin: bottom right;
+  }
+  #hud-yusuf-farm.active ~ .drive-pad,
+  .drive-pad.visible {
+    z-index: 65;
+  }
+
+  /* 6. Arcade, 3D Chess, XOX, Memory & Full-Screen 3D Games on Phones */
+  .full-overlay-screen { padding: 8px; }
+  .arcade-nav { gap: 5px; margin-bottom: 8px; max-height: 76px !important; }
+  .arcade-tab-btn { padding: 5px 9px !important; font-size: 11.5px !important; border-radius: 12px; }
+  .arcade-panel { padding: 10px 8px; border-radius: 18px; border-width: 3px; gap: 10px; }
+  #chess-board-grid {
+    grid-template-columns: repeat(8, 38px) !important;
+    grid-template-rows: repeat(8, 38px) !important;
+    border-width: 6px !important;
+    transform: rotateX(14deg) !important;
+  }
+  #chess-board-grid > div { width: 38px !important; height: 38px !important; }
+  #chess-board-grid > div > div { width: 32px !important; height: 32px !important; font-size: 24px !important; }
+  .memory-grid { grid-template-columns: repeat(4, 72px); grid-template-rows: repeat(3, 78px); gap: 7px; }
+  .memory-card { width: 72px; height: 78px; border-radius: 14px; font-size: 26px; }
+  .memory-card img { width: 48px; height: 48px; }
+  .xox-board { grid-template-columns: repeat(3, 82px); grid-template-rows: repeat(3, 82px); gap: 8px; padding: 8px; }
+  .xox-cell img { width: 54px; height: 54px; }
+  .puzzle-grid { grid-template-columns: repeat(3, 86px); grid-template-rows: repeat(3, 86px); padding: 6px; }
+  .puzzle-tile { width: 86px; height: 86px; background-size: 258px 258px; }
+  .guess-choices-grid { grid-template-columns: repeat(2, 1fr); width: 100%; gap: 8px; }
+  .guess-choice-btn { padding: 10px 8px; font-size: 13.5px; }
+
+  /* 7. Full-Screen Mobile Chat Drawer */
+  .chat-drawer {
+    top: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    border-left: none;
+  }
 }

@@ -60,17 +60,18 @@ export function launch3DMiniGame(gameId, container, helpers) {
   hudTop.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:860px;flex-wrap:wrap;gap:8px;background:rgba(255,255,255,0.92);padding:8px 14px;border-radius:18px;border:3px solid #f472b6;';
   wrapper.appendChild(hudTop);
 
+  const isMobile = window.innerWidth < 760;
+  const h = isMobile ? 255 : 360;
   const canvasHost = document.createElement('div');
-  canvasHost.style.cssText = 'width:100%;max-width:860px;height:360px;border-radius:22px;overflow:hidden;border:4px solid #fff;box-shadow:0 14px 30px rgba(0,0,0,0.2);position:relative;background:#0f172a;touch-action:none;';
+  canvasHost.style.cssText = `width:100%;max-width:860px;height:${h}px;border-radius:18px;overflow:hidden;border:3px solid #fff;box-shadow:0 14px 30px rgba(0,0,0,0.2);position:relative;background:#0f172a;touch-action:none;`;
   wrapper.appendChild(canvasHost);
 
   const controlsBar = document.createElement('div');
-  controlsBar.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;';
+  controlsBar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;width:100%;';
   wrapper.appendChild(controlsBar);
 
   // Shared Three.js Mini-Scene Setup (Cleanly disposed on exit so browser NEVER crashes!)
-  const w = Math.max(460, canvasHost.clientWidth || 720);
-  const h = 360;
+  const w = Math.max(280, Math.min(860, canvasHost.clientWidth || (window.innerWidth - 28)));
   const sc = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(48, w / h, 0.1, 160);
   const ren = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
