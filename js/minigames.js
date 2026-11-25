@@ -106,37 +106,32 @@ export function launchMiniGame(gameId, container, helpers) {
      PART A: 10 NEW GAMES FOR BIGGER COUSINS & CO-OP
      ========================================================================== */
 
-  // 12. FARKLI OLANI BUL (ODD ONE OUT)
+  // 12. FARKLI OLANI BUL (ODD ONE OUT — SCALES 3x3 -> 4x4 -> 5x5 ACROSS 15 LEVELS!)
   if (gameId === 'odd_one') {
-    const sets = [
-      ['🐄','🐄','🐄','🐄','🐄','🐄','🐄','🐄','🐴'],
-      ['🍎','🍎','🍎','🍎','🍓','🍎','🍎','🍎','🍎'],
-      ['✈️','✈️','🚗','✈️','✈️','✈️','✈️','✈️','✈️'],
-      ['🌸','🌸','🌸','🌸','🌸','🌻','🌸','🌸','🌸'],
-      ['🐶','🐶','🐶','🐱','🐶','🐶','🐶','🐶','🐶'],
-      ['⭐','⭐','⭐','⭐','⭐','⭐','🌙','⭐','⭐'],
-      ['🧁','🧁','🍰','🧁','🧁','🧁','🧁','🧁','🧁'],
-      ['🦋','🦋','🦋','🦋','🐝','🦋','🦋','🦋','🦋']
+    const pairs = [
+      ['🐄','🐴'], ['🍎','🍓'], ['✈️','🚗'], ['🌸','🌻'], ['🐶','🐱'],
+      ['⭐','🌙'], ['🧁','🍰'], ['🦋','🐝'], ['😀','😃'], ['🍏','🍐'],
+      ['🐱','🐯'], ['🦊','🐶'], ['🌺','🌷'], ['🍇','🫐'], ['🎈','🔴']
     ];
     let score = 0;
     const renderRound = () => {
-      const pair = sets[Math.floor(Math.random() * sets.length)];
-      const shuffled = [...pair].sort(() => Math.random() - 0.5);
-      // Find the unique emoji
-      const counts = {};
-      shuffled.forEach(e => counts[e] = (counts[e] || 0) + 1);
-      const oddEmoji = Object.keys(counts).find(k => counts[k] === 1);
+      const cols = gameLevel <= 4 ? 3 : (gameLevel <= 9 ? 4 : 5);
+      const total = cols * cols;
+      const [baseEmo, oddEmoji] = pairs[(gameLevel - 1 + score) % pairs.length];
+      const arr = Array(total - 1).fill(baseEmo);
+      arr.push(oddEmoji);
+      const shuffled = arr.sort(() => Math.random() - 0.5);
+      const cellPx = cols === 3 ? 82 : (cols === 4 ? 66 : 54);
 
       container.innerHTML = `
-        <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
-          <h2 style="color:#db2777;">🔍 Farklı Olanı Bul! (Skor: ${score})</h2>
-          <p style="font-weight:700;color:#64748b;">Aralarında sadece 1 tane farklı olan var, onu bul ve dokun!</p>
-          <div id="odd-grid" style="display:grid;grid-template-columns:repeat(3,88px);gap:10px;"></div>
+        <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <h2 style="color:#db2777;margin:0;font-size:17px;">🔍 Farklı Olanı Bul! (${cols}×${cols} — Skor: ${score})</h2>
+          <div id="odd-grid" style="display:grid;grid-template-columns:repeat(${cols},${cellPx}px);gap:6px;"></div>
         </div>`;
       const g = container.querySelector('#odd-grid');
       shuffled.forEach(emo => {
         const b = document.createElement('button');
-        b.style.cssText = 'height:88px;font-size:44px;border-radius:20px;border:4px solid #fbcfe8;background:#fff;cursor:pointer;box-shadow:0 5px 10px rgba(0,0,0,0.08);';
+        b.style.cssText = `height:${cellPx}px;font-size:${cols===5?28:36}px;border-radius:14px;border:3px solid #fbcfe8;background:#fff;cursor:pointer;`;
         b.textContent = emo;
         b.onclick = () => {
           if (emo === oddEmoji) {
@@ -227,10 +222,18 @@ export function launchMiniGame(gameId, container, helpers) {
     const ctx = c.getContext('2d');
     let px = 170, bx = 210, by = 200, vx = 3.2, vy = -3.2, score = 0;
     const bricks = [];
-    const colors = ['#f43f5e','#f59e0b','#10b981','#38bdf8'];
-    for (let r = 0; r < 4; r++) for (let col = 0; col < 7; col++) {
-      bricks.push({ x: 14 + col*57, y: 18 + r*24, w: 50, h: 18, c: colors[r], alive: true });
-    }
+    const colors = ['#f43f5e','#f59e0b','#10b981','#38bdf8','#a855f7'];
+    const buildBricks = () => {
+      bricks.length = 0;
+      const pattern = (gameLevel - 1) % 4; // 4 different shapes: Wall, Pyramid, Checkerboard, Diamond!
+      for (let r = 0; r < 5; r++) for (let col = 0; col < 7; col++) {
+        if (pattern === 1 && (col < r || col > 6 - r)) continue;
+        if (pattern === 2 && (r + col) % 2 === 1) continue;
+        if (pattern === 3 && Math.abs(col - 3) + Math.abs(r - 2) > 3) continue;
+        bricks.push({ x: 14 + col*57, y: 16 + r*22, w: 50, h: 17, c: colors[r % colors.length], alive: true });
+      }
+    };
+    buildBricks();
     c.onpointermove = (e) => {
       const rect = c.getBoundingClientRect();
       px = Math.max(0, Math.min(c.width - 80, (e.clientX - rect.left) * (c.width / rect.width) - 40));

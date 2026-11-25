@@ -179,20 +179,35 @@ export function launch3DMiniGame(gameId, container, helpers) {
       playSound('pop');
       if (who === 1) z1 -= 2.4; else z2 -= 2.4;
       if (!isRemote && raceMode === 'online' && sendMultiplayerSync) sendMultiplayerSync({ type: 'race3d_push', who });
-      if (z1 <= -42) {
+      const finishZ = finishArch.position.z;
+      if (z1 <= finishZ) {
         winner = (raceMode === 'bot' && myCar === 2) ? 'BOT (Pembe Araba)' : 'UMAY (Pembe Araba)';
         hudTop.querySelector('#r3-st').textContent = `🏆 KAZANAN: ${winner}! 🎉`;
         addStars(5); playSound('win'); speakText(`Tebrikler! 3 Boyutlu Araba Yarışını ${winner} kazandı!`);
-      } else if (z2 <= -42) {
+        if (currentLevel < MAX_LEVEL) setTimeout(() => setLevel(currentLevel + 1, true), 1600);
+      } else if (z2 <= finishZ) {
         winner = (raceMode === 'bot' && myCar === 1) ? 'BOT (Yeşil Araba)' : 'YUSUF (Yeşil Araba)';
         hudTop.querySelector('#r3-st').textContent = `🏆 KAZANAN: ${winner}! 🎉`;
         addStars(5); playSound('win'); speakText(`Tebrikler! 3 Boyutlu Araba Yarışını ${winner} kazandı!`);
+        if (currentLevel < MAX_LEVEL) setTimeout(() => setLevel(currentLevel + 1, true), 1600);
       }
     };
 
+    const biomes = [
+      { sky: '#7dd3fc', grass: 0x4ade80, name: '☀️ Yaz Pisti' },
+      { sky: '#fde68a', grass: 0xf59e0b, name: '🏜️ Çöl Pisti' },
+      { sky: '#1e1b4b', grass: 0x312e81, name: '🌙 Gece Neon Pisti' },
+      { sky: '#cbd5e1', grass: 0xf8fafc, name: '❄️ Buzul Kar Pisti' },
+      { sky: '#4c1d95', grass: 0x7c3aed, name: '🌌 Uzay Pisti' }
+    ];
     const resetRace = () => {
       z1 = 2; z2 = 2; winner = null;
-      hudTop.querySelector('#r3-st').textContent = raceMode === 'bot' ? '🤖 Bota Karşı Yarış!' : (raceMode === 'local' ? '📱 Aynı Cihazda 2P Yarış!' : '🌐 Online Canlı Yarış!');
+      const bm = biomes[(currentLevel - 1) % biomes.length];
+      sc.background.set(bm.sky);
+      grass.material.color.setHex(bm.grass);
+      const finishZ = -(36 + currentLevel * 3);
+      finishArch.position.z = finishZ;
+      hudTop.querySelector('#r3-st').textContent = `${bm.name} (Lv ${currentLevel})`;
     };
     const setRMode = (m) => {
       raceMode = m;
@@ -291,10 +306,24 @@ export function launch3DMiniGame(gameId, container, helpers) {
     ren.domElement.addEventListener('pointerdown', onDown);
     extraCleanup = () => ren.domElement.removeEventListener('pointerdown', onDown);
 
+    // Moving 3D Ice Shield Wall appears on Level 4+ to make levels genuinely harder!
+    const iceWall = new THREE.Mesh(
+      new THREE.BoxGeometry(3.2, 2.2, 0.4),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.72 })
+    );
+    iceWall.position.set(0, 1.1, -3.2);
+    iceWall.visible = false;
+    sc.add(iceWall);
+
     const loop = () => {
-      const lvMult = 1 + (currentLevel - 1) * 0.16;
-      targets.forEach(t => {
+      const lvMult = 1 + (currentLevel - 1) * 0.2;
+      const nowT = performance.now() * 0.003;
+      iceWall.visible = currentLevel >= 4;
+      if (iceWall.visible) iceWall.position.x = Math.sin(nowT * (0.7 + currentLevel * 0.1)) * 5.2;
+      targets.forEach((t, idx) => {
         t.position.x += t.userData.speed * lvMult;
+        if (currentLevel >= 5) t.position.y = Math.abs(Math.sin(nowT * 2 + idx)) * (0.4 + currentLevel * 0.08);
+        else t.position.y = 0;
         if (Math.abs(t.position.x) > 7.5) t.userData.speed *= -1;
       });
       for (let i = snowballs.length - 1; i >= 0; i--) {
@@ -302,8 +331,11 @@ export function launch3DMiniGame(gameId, container, helpers) {
         s.position.x += s.userData.vx; s.position.y += s.userData.vy; s.position.z += s.userData.vz;
         s.userData.vy -= 0.008;
         let hit = false;
-        targets.forEach(t => {
-          if (s.position.distanceTo(new THREE.Vector3(t.position.x, 1.6, t.position.z)) < 1.35) {
+        if (iceWall.visible && Math.abs(s.position.z - iceWall.position.z) < 0.6 && Math.abs(s.position.x - iceWall.position.x) < 1.8 && s.position.y < 2.3) {
+          hit = true; playSound('pop');
+        }
+        if (!hit) targets.forEach(t => {
+          if (s.position.distanceTo(new THREE.Vector3(t.position.x, t.position.y + 1.6, t.position.z)) < 1.35) {
             hit = true; score++;
             hudTop.querySelector('#sb3-sc').textContent = `İsabet: ${score} ❄️`;
             playSound('win'); if (score % 3 === 0) addStars(1);
@@ -381,10 +413,21 @@ export function launch3DMiniGame(gameId, container, helpers) {
     fireBtn.onpointerleave = releaseArrow;
 
     const loop = () => {
-      aimPhase += 0.03 + (currentLevel - 1) * 0.006;
-      const tScale = Math.max(0.58, 1.0 - (currentLevel - 1) * 0.028);
+      aimPhase += 0.03 + (currentLevel - 1) * 0.007;
+      const tScale = Math.max(0.52, 1.0 - (currentLevel - 1) * 0.032);
       targetGrp.scale.set(tScale, tScale, 1);
-      aimRing.position.x = Math.sin(aimPhase) * (2.2 + currentLevel * 0.08);
+      // Higher levels move the target board itself in different patterns (Horizontal Lv3+, Figure-8 Lv7+)!
+      if (currentLevel >= 3) {
+        targetGrp.position.x = Math.sin(aimPhase * (0.4 + currentLevel * 0.05)) * Math.min(4.2, currentLevel * 0.35);
+      } else {
+        targetGrp.position.x = 0;
+      }
+      if (currentLevel >= 7) {
+        targetGrp.position.y = 3.2 + Math.sin(aimPhase * 0.9) * 1.1;
+      } else {
+        targetGrp.position.y = 3.2;
+      }
+      aimRing.position.x = Math.sin(aimPhase) * (2.4 + currentLevel * 0.12);
       aimRing.position.y = 3.2 + Math.cos(aimPhase * 1.4) * 1.1;
       if (charging) {
         power = (power + 2.2 + currentLevel * 0.16) % 101;
@@ -437,15 +480,20 @@ export function launch3DMiniGame(gameId, container, helpers) {
 
     const spawnBot = () => {
       const bot = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 1.1), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-      body.position.y = 0.75;
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.8), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
-      head.position.y = 1.85;
+      const isBoss = (currentLevel >= 7 && Math.random() < 0.28);
+      const isScout = (!isBoss && currentLevel >= 4 && Math.random() < 0.45);
+      const bodyGeo = isScout ? new THREE.ConeGeometry(0.75, 1.8, 4) : new THREE.BoxGeometry(isBoss ? 1.8 : 1.1, isBoss ? 2.2 : 1.5, isBoss ? 1.8 : 1.1);
+      const bodyCol = isBoss ? 0x7c3aed : (isScout ? 0xf59e0b : 0xef4444);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: bodyCol, metalness: isBoss ? 0.5 : 0.1 }));
+      body.position.y = isBoss ? 1.1 : 0.85;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(isBoss ? 1.2 : 0.8, 0.7, isBoss ? 1.2 : 0.8), new THREE.MeshStandardMaterial({ color: isBoss ? 0xef4444 : 0xfacc15 }));
+      head.position.y = isBoss ? 2.5 : 1.85;
       bot.add(body, head);
       bot.position.set((Math.random() - 0.5) * 11, 0, -14);
+      bot.userData = { hp: isBoss ? 3 : 1, isScout, phase: Math.random() * 6 };
       sc.add(bot); enemies.push(bot);
     };
-    const spInt = setInterval(spawnBot, 1600);
+    const spInt = setInterval(spawnBot, 1450);
     spawnBot();
 
     const rc = new THREE.Raycaster(), pt = new THREE.Vector2();
@@ -459,6 +507,12 @@ export function launch3DMiniGame(gameId, container, helpers) {
       if (hits.length > 0) {
         let root = hits[0].object;
         while (root.parent && !enemies.includes(root)) root = root.parent;
+        root.userData.hp = (root.userData.hp || 1) - 1;
+        if (root.userData.hp > 0) {
+          root.scale.multiplyScalar(0.86);
+          playSound('pop');
+          return;
+        }
         sc.remove(root);
         const idx = enemies.indexOf(root); if (idx >= 0) enemies.splice(idx, 1);
         score++;
@@ -473,11 +527,14 @@ export function launch3DMiniGame(gameId, container, helpers) {
     extraCleanup = () => { clearInterval(spInt); ren.domElement.removeEventListener('pointerdown', onDown); };
 
     const loop = () => {
-      const botSpd = 0.045 + (currentLevel - 1) * 0.012;
+      const botSpd = 0.045 + (currentLevel - 1) * 0.014;
+      const nowT = performance.now() * 0.005;
       for (let i = enemies.length - 1; i >= 0; i--) {
-        enemies[i].position.z += botSpd;
-        if (enemies[i].position.z > 5.0) {
-          sc.remove(enemies[i]); enemies.splice(i, 1); playSound('bear');
+        const en = enemies[i];
+        en.position.z += en.userData.isScout ? botSpd * 1.45 : botSpd;
+        if (en.userData.isScout) en.position.x += Math.sin(nowT + en.userData.phase) * 0.14;
+        if (en.position.z > 5.0) {
+          sc.remove(en); enemies.splice(i, 1); playSound('bear');
         }
       }
       ren.render(sc, cam);
@@ -579,26 +636,36 @@ export function launch3DMiniGame(gameId, container, helpers) {
 
     const loop = () => {
       basket.position.x += (bx - basket.position.x) * 0.25;
-      const spawnRate = 0.04 + currentLevel * 0.008;
-      const fallSpd = 0.095 + currentLevel * 0.015;
+      const spawnRate = 0.045 + currentLevel * 0.008;
+      const fallSpd = 0.095 + currentLevel * 0.016;
       const goalScore = currentLevel * 8;
       if (Math.random() < spawnRate) {
-        const j = new THREE.Mesh(
-          new THREE.CapsuleGeometry(0.32, 0.35, 8, 12),
-          new THREE.MeshStandardMaterial({ color: jCols[Math.floor(Math.random() * jCols.length)], roughness: 0.15 })
-        );
+        const isBomb = (currentLevel >= 3 && Math.random() < Math.min(0.32, 0.1 + currentLevel * 0.018));
+        const shapeIdx = Math.floor(Math.random() * 3);
+        const geo = isBomb
+          ? new THREE.SphereGeometry(0.42, 12, 12)
+          : (shapeIdx === 0 ? new THREE.CapsuleGeometry(0.32, 0.35, 8, 12) : (shapeIdx === 1 ? new THREE.BoxGeometry(0.55, 0.55, 0.55) : new THREE.OctahedronGeometry(0.42, 0)));
+        const mat = new THREE.MeshStandardMaterial({ color: isBomb ? 0x111827 : jCols[Math.floor(Math.random() * jCols.length)], roughness: 0.15 });
+        const j = new THREE.Mesh(geo, mat);
         j.position.set((Math.random() - 0.5) * 12, 9, 0);
+        j.userData = { isBomb };
         sc.add(j); jellies.push(j);
       }
       for (let i = jellies.length - 1; i >= 0; i--) {
         const j = jellies[i];
         j.position.y -= fallSpd; j.rotation.x += 0.06; j.rotation.z += 0.04;
         if (j.position.y < 1.2 && Math.abs(j.position.x - basket.position.x) < 1.55) {
-          score++; hudTop.querySelector('#jl-sc').textContent = `Jelibon: ${score} / ${goalScore} 🍬`;
-          playSound('pop'); if (score % 4 === 0) addStars(1);
-          if (score >= goalScore && currentLevel < MAX_LEVEL) {
-            addStars(3);
-            setLevel(currentLevel + 1, true);
+          if (j.userData.isBomb) {
+            score = Math.max(0, score - 2);
+            playSound('bear');
+            hudTop.querySelector('#jl-sc').textContent = `💣 BOMBA! Jelibon: ${score} / ${goalScore}`;
+          } else {
+            score++; hudTop.querySelector('#jl-sc').textContent = `Jelibon: ${score} / ${goalScore} 🍬`;
+            playSound('pop'); if (score % 4 === 0) addStars(1);
+            if (score >= goalScore && currentLevel < MAX_LEVEL) {
+              addStars(3);
+              setLevel(currentLevel + 1, true);
+            }
           }
           sc.remove(j); j.geometry.dispose(); j.material.dispose(); jellies.splice(i, 1);
         } else if (j.position.y < -1) {

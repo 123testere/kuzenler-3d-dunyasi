@@ -2511,21 +2511,27 @@ window.switch3DFarmTheme = function(ownerId) {
   speakText(`${POSSESSIVE_NAME[ownerId]} 3 boyutlu çiftliğine geçtin!`);
 };
 
-window.spawn3DFarmAnimal = function(type, x = (Math.random()-0.5)*6, z = (Math.random()-0.5)*4, customName = null, isSystemInit = false) {
-  if (!isSystemInit && !canEditFarm(true)) return;
+window.spawn3DFarmAnimal = function(type, x = (Math.random()-0.5)*6, z = (Math.random()-0.5)*4, customName = null, isSystemInit = false, remoteUid = null) {
+  if (!isSystemInit && !remoteUid && !canEditFarm(true)) return;
+  const uid = remoteUid || ('fa_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+  if (farmAnimalMeshes.some(m => m.userData?.uid === uid)) return;
   const name = customName || `${type==='dog'?'Karabaş':type==='pony'?'Midilli':'Sarıkız'} ${farmAnimalMeshes.length+1}`;
   const mesh = create3DCompanionPetMesh(type, { petOutfit: type==='pony'?'pink_saddle':'none', petCollar: 'bell' });
   mesh.scale.set(1.2, 1.2, 1.2);
   const lbl = create3DTextLabel(`${type==='dog'?'🐶':type==='pony'?'🐴':'🐄'} ${name}`, type==='dog'?'#d97706':'#10b981');
   lbl.position.y = 2.55; mesh.add(lbl);
   mesh.position.set(x, 0, z);
-  mesh.userData = { clickableType: 'farm_animal', animalType: type, name, hunger: 70, thirst: 65, clean: 65, love: 80, phase: Math.random()*6, targetX: x, targetZ: z, handCooldown: 0 };
+  mesh.userData = { uid, clickableType: 'farm_animal', animalType: type, name, hunger: 70, thirst: 65, clean: 65, love: 80, phase: Math.random()*6, targetX: x, targetZ: z, handCooldown: 0 };
   worldGroups['yusuf-farm'].add(mesh);
   farmAnimalMeshes.push(mesh);
   draggableFarmObjects.push(mesh);
   if (type === 'dog') farmDogMeshes.push(mesh);
   state.selectedAnimalMesh = mesh;
   updateFarmAnimalBanner(mesh.userData);
+  // Broadcast new farm animal live so BOTH Umay and Yusuf see each other's farm animals!
+  if (!isSystemInit && !remoteUid) {
+    sendMultiplayerSync({ type: 'farm_animal_spawn', animal: { uid, type, x, z, name } });
+  }
 };
 
 window.renameSelected3DAnimal = () => {
@@ -3196,9 +3202,10 @@ function animate3DLoop() {
         if (state.mountMode === 'walk' || state.mountMode === 'horse') {
           explorerRig.position.y = Math.abs(Math.sin(t * 12)) * 0.18;
         }
-        // Broadcast 3D avatar position to other connected cousin tablets (throttled to ~10Hz)
+        // Broadcast 3D avatar + companion pet live to other connected cousin devices (~10Hz)
         if (performance.now() - lastPosBroadcast > 110) {
           lastPosBroadcast = performance.now();
+          const myCfg = state.salonConfigs[state.currentPlayer] || {};
           sendMultiplayerSync({
             type: 'avatar_pos',
             cousinId: state.currentPlayer,
@@ -3206,7 +3213,11 @@ function animate3DLoop() {
             x: explorerRig.position.x,
             y: explorerRig.position.y,
             z: explorerRig.position.z,
-            rotY: explorerRig.rotation.y
+            rotY: explorerRig.rotation.y,
+            petType: myCfg.petType || 'pony',
+            petColor: myCfg.petColor || '#9ca3af',
+            petOutfit: myCfg.petOutfit || 'none',
+            petHat: myCfg.petHat || 'none'
           });
         }
       }
@@ -4167,22 +4178,41 @@ function updateRemote3DAvatar(data) {
 
   if (!remoteAvatars[key]) {
     const cid = data.cousinId || 'yusuf';
-    const mesh = createFitted3DCharacter(cid, state.salonConfigs[cid] || state.salonConfigs.yusuf, false);
+    const baseCfg = state.salonConfigs[cid] || state.salonConfigs.yusuf;
+    const mesh = createFitted3DCharacter(cid, baseCfg, false);
     mesh.scale.set(0.55, 0.55, 0.55);
     const lbl = create3DTextLabel(`🟢 ${COUSINS[cid]?.name || 'Kuzen'} (Canlı)`, COUSINS[cid]?.color || '#10b981');
     lbl.position.set(0, 6.2, 0);
     mesh.add(lbl);
-    remoteAvatars[key] = { mesh, mode: data.mode };
-    targetWorld.add(mesh);
+
+    // ALSO render the remote cousin's 3D Companion Pet following right beside them so BOTH see each other's animals!
+    const petMesh = create3DCompanionPetMesh(data.petType || baseCfg.petType || 'pony', {
+      petColor: data.petColor || baseCfg.petColor,
+      petOutfit: data.petOutfit || baseCfg.petOutfit,
+      petHat: data.petHat || baseCfg.petHat
+    });
+    petMesh.scale.set(0.85, 0.85, 0.85);
+    const petLbl = create3DTextLabel(`🐾 ${COUSINS[cid]?.name || 'Kuzen'}'ın Canlısı`, COUSINS[cid]?.color || '#ec4899');
+    petLbl.position.set(0, 2.5, 0);
+    petMesh.add(petLbl);
+
+    remoteAvatars[key] = { mesh, petMesh, mode: data.mode };
+    targetWorld.add(mesh, petMesh);
   }
   const entry = remoteAvatars[key];
   if (entry.mode !== data.mode) {
     if (entry.mesh.parent) entry.mesh.parent.remove(entry.mesh);
+    if (entry.petMesh && entry.petMesh.parent) entry.petMesh.parent.remove(entry.petMesh);
     targetWorld.add(entry.mesh);
+    if (entry.petMesh) targetWorld.add(entry.petMesh);
     entry.mode = data.mode;
   }
   entry.mesh.position.set(data.x, data.y || 0, data.z);
   entry.mesh.rotation.y = data.rotY || 0;
+  if (entry.petMesh) {
+    entry.petMesh.position.set(data.x - 1.7, data.y || 0, data.z + 1.1);
+    entry.petMesh.rotation.y = data.rotY || 0;
+  }
 }
 
 let clientAppVersion = null;
@@ -4195,6 +4225,9 @@ function applyInitialServerState(ls) {
   if (Array.isArray(ls.onlineCousins)) {
     ls.onlineCousins.forEach(n => onlineCousins.add(n));
     updateOnlineCousinsBadge();
+  }
+  if (Array.isArray(ls.farmAnimals)) {
+    ls.farmAnimals.forEach(a => window.spawn3DFarmAnimal(a.type, a.x, a.z, a.name, true, a.uid));
   }
 }
 
@@ -4246,6 +4279,10 @@ function handleIncomingSync(payload) {
     if (state.currentPlayer === 'umay') {
       speakText('Yusuf seni 3D çiftliğe çağırdı! Artık çiftliğe girip her şeyi sürükle bırak ile düzenleyebilirsin!');
     }
+  } else if (payload.type === 'farm_animal_spawn' && payload.animal) {
+    const a = payload.animal;
+    window.spawn3DFarmAnimal(a.type, a.x, a.z, a.name, true, a.uid);
+    playSound('pop');
   } else if (payload.type === 'avatar_pos') {
     updateRemote3DAvatar(payload);
   }

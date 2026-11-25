@@ -26,7 +26,8 @@ const recentEvents = []; // { seq, data }
 const latestState = {
   chess: null,
   xox: null,
-  onlineCousins: []
+  onlineCousins: [],
+  farmAnimals: []
 };
 
 function recordAndBroadcast(dataObj) {
@@ -36,6 +37,12 @@ function recordAndBroadcast(dataObj) {
   if (dataObj.type === 'xox_sync' && dataObj.xox) latestState.xox = dataObj.xox;
   if (dataObj.type === 'presence_join' && dataObj.name) {
     if (!latestState.onlineCousins.includes(dataObj.name)) latestState.onlineCousins.push(dataObj.name);
+  }
+  if (dataObj.type === 'farm_animal_spawn' && dataObj.animal) {
+    if (!latestState.farmAnimals.some(a => a.uid === dataObj.animal.uid)) {
+      latestState.farmAnimals.push(dataObj.animal);
+      if (latestState.farmAnimals.length > 40) latestState.farmAnimals.shift();
+    }
   }
   recentEvents.push({ seq: eventSeq, data: enriched });
   if (recentEvents.length > 150) recentEvents.shift();
