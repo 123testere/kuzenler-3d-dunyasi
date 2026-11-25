@@ -4182,8 +4182,23 @@ function updateRemote3DAvatar(data) {
   entry.mesh.rotation.y = data.rotY || 0;
 }
 
+let clientAppVersion = null;
 function handleIncomingSync(payload) {
   if (!payload || payload.senderClientId === CLIENT_ID) return;
+
+  // Automatic Live Page Update when server restarts, redeploys, or files change!
+  if (payload.type === 'connected' && payload.version) {
+    if (clientAppVersion && clientAppVersion !== payload.version) {
+      window.location.reload();
+      return;
+    }
+    clientAppVersion = payload.version;
+    return;
+  }
+  if (payload.type === 'reload_page') {
+    window.location.reload();
+    return;
+  }
 
   if (payload.type === 'chat_msg' && payload.msg && !state.chatMessages.some(m => m.id === payload.msg.id)) {
     state.chatMessages.push(payload.msg);

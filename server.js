@@ -20,6 +20,22 @@ const MIME_TYPES = {
 
 // Connected Server-Sent Events (SSE) clients for real-time cousin multiplayer sync
 const clients = new Set();
+let SERVER_VERSION = String(Date.now());
+
+// Auto-watch game files so any edit immediately triggers automatic page refresh on all connected devices!
+let watchDebounce = null;
+['index.html', 'css', 'js'].forEach(rel => {
+  const full = path.join(PUBLIC_DIR, rel);
+  try {
+    fs.watch(full, { recursive: false }, () => {
+      if (watchDebounce) clearTimeout(watchDebounce);
+      watchDebounce = setTimeout(() => {
+        SERVER_VERSION = String(Date.now());
+        broadcastToClients({ type: 'reload_page', version: SERVER_VERSION });
+      }, 400);
+    });
+  } catch (e) {}
+});
 
 // Keepalive ping every 25s so cloud proxies (Render/Railway/ngrok) never drop live multiplayer SSE!
 setInterval(() => {
@@ -48,10 +64,15 @@ const server = http.createServer((req, res) => {
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*'
     });
-    res.write('data: {"type":"connected"}\n\n');
+    res.write(`data: ${JSON.stringify({ type: 'connected', version: SERVER_VERSION })}\n\n`);
     clients.add(res);
     req.on('close', () => clients.delete(res));
     return;
+  }
+
+  if (req.url === '/api/version' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ version: SERVER_VERSION }));
   }
 
   // Broadcast endpoint when any cousin moves an item, plays XOX, or sends a voice sticker
