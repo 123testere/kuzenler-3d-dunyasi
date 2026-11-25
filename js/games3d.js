@@ -142,42 +142,49 @@ export function launch3DMiniGame(gameId, container, helpers) {
     const car2 = makeCar(0x10b981); car2.position.set(2.2, 0, 2);
     sc.add(car1, car2);
 
-    let z1 = 2, z2 = 2, winner = null, vsBot = false;
+    let z1 = 2, z2 = 2, winner = null, raceMode = 'online'; // 'online' | 'local' | 'bot'
     const myCar = (helpers.currentPlayer === 'yusuf') ? 2 : 1; // Umay=1 (Pembe), Yusuf=2 (Yeşil)
 
     hudTop.innerHTML = `
-      <b style="color:#db2777;font-size:15px;">🏎️ 3D Yarış (Senin Araban: ${myCar === 1 ? '👧 Umay Pembe' : '👦 Yusuf Yeşil'})</b>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <button class="hud-btn active" id="r3-m2p" style="padding:4px 9px;font-size:12px;">🌐 2 Kuzen (Canlı)</button>
-        <button class="hud-btn green" id="r3-mbot" style="padding:4px 9px;font-size:12px;">🤖 Bota Karşı</button>
-        <span id="r3-st" style="font-weight:900;color:#059669;font-size:13px;">Sadece kendi arabana gaz ver!</span>
+      <b style="color:#db2777;font-size:14px;">🏎️ 3D Yarış</b>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <button class="hud-btn active" id="r3-m2p" style="padding:4px 8px;font-size:11.5px;">🌐 Online 2P</button>
+        <button class="hud-btn" id="r3-mloc" style="padding:4px 8px;font-size:11.5px;">📱 Aynı Cihaz 2P</button>
+        <button class="hud-btn green" id="r3-mbot" style="padding:4px 8px;font-size:11.5px;">🤖 Bota Karşı</button>
+        <span id="r3-st" style="font-weight:900;color:#059669;font-size:12px;">Bitişe ilk ulaşan kazanır!</span>
       </div>`;
     controlsBar.innerHTML = `
-      <button class="hud-btn ${myCar === 1 ? 'active' : ''}" id="r3-g1" style="font-size:16px;padding:10px 20px;${myCar !== 1 ? 'opacity:0.45;' : ''}">
-        ${myCar === 1 ? '👧 UMAY 3D GAZ! (A)' : '🔒 Umay Arabası'}
-      </button>
-      <button class="hud-btn ${myCar === 2 ? 'green' : ''}" id="r3-g2" style="font-size:16px;padding:10px 20px;${myCar !== 2 ? 'opacity:0.45;' : ''}">
-        ${myCar === 2 ? '👦 YUSUF 3D GAZ! (L)' : '🔒 Yusuf Arabası'}
-      </button>
-      <button class="hud-btn" id="r3-rst">🔄 Yeniden Yarış</button>`;
+      <button class="hud-btn active" id="r3-g1" style="font-size:15px;padding:9px 18px;">👧 UMAY 3D GAZ! (A)</button>
+      <button class="hud-btn green" id="r3-g2" style="font-size:15px;padding:9px 18px;">👦 YUSUF 3D GAZ! (L)</button>
+      <button class="hud-btn" id="r3-rst">🔄 Yeniden</button>`;
+
+    const updateRaceBtns = () => {
+      const b1 = controlsBar.querySelector('#r3-g1');
+      const b2 = controlsBar.querySelector('#r3-g2');
+      const lockOther = (raceMode !== 'local');
+      b1.style.opacity = (lockOther && myCar !== 1) ? '0.45' : '1';
+      b2.style.opacity = (lockOther && myCar !== 2) ? '0.45' : '1';
+      b1.textContent = (lockOther && myCar !== 1) ? '🔒 Umay Arabası' : '👧 UMAY 3D GAZ! (A)';
+      b2.textContent = (lockOther && myCar !== 2) ? '🔒 Yusuf Arabası' : '👦 YUSUF 3D GAZ! (L)';
+    };
+    updateRaceBtns();
 
     const pushCar = (who, isRemote = false) => {
       if (winner) return;
-      // STRICT CAR OWNERSHIP LOCK: Cannot press opponent's gas button!
-      if (!isRemote && who !== myCar) {
+      if (!isRemote && raceMode !== 'local' && who !== myCar) {
         playSound('moo');
-        speakText('Bu diğer kuzenin arabası! Sadece kendi arabana gaz verebilirsin!');
+        speakText('Bu diğer kuzenin arabası! Aynı cihazda oynamak için "Aynı Cihaz 2P" seçin!');
         return;
       }
       playSound('pop');
       if (who === 1) z1 -= 2.4; else z2 -= 2.4;
-      if (!isRemote && !vsBot && sendMultiplayerSync) sendMultiplayerSync({ type: 'race3d_push', who });
+      if (!isRemote && raceMode === 'online' && sendMultiplayerSync) sendMultiplayerSync({ type: 'race3d_push', who });
       if (z1 <= -42) {
-        winner = (vsBot && myCar === 2) ? 'BOT (Pembe Araba)' : 'UMAY (Pembe Araba)';
+        winner = (raceMode === 'bot' && myCar === 2) ? 'BOT (Pembe Araba)' : 'UMAY (Pembe Araba)';
         hudTop.querySelector('#r3-st').textContent = `🏆 KAZANAN: ${winner}! 🎉`;
         addStars(5); playSound('win'); speakText(`Tebrikler! 3 Boyutlu Araba Yarışını ${winner} kazandı!`);
       } else if (z2 <= -42) {
-        winner = (vsBot && myCar === 1) ? 'BOT (Yeşil Araba)' : 'YUSUF (Yeşil Araba)';
+        winner = (raceMode === 'bot' && myCar === 1) ? 'BOT (Yeşil Araba)' : 'YUSUF (Yeşil Araba)';
         hudTop.querySelector('#r3-st').textContent = `🏆 KAZANAN: ${winner}! 🎉`;
         addStars(5); playSound('win'); speakText(`Tebrikler! 3 Boyutlu Araba Yarışını ${winner} kazandı!`);
       }
@@ -185,29 +192,26 @@ export function launch3DMiniGame(gameId, container, helpers) {
 
     const resetRace = () => {
       z1 = 2; z2 = 2; winner = null;
-      hudTop.querySelector('#r3-st').textContent = vsBot ? '🤖 Bota Karşı Yarış Başladı!' : '🌐 Canlı 2 Kuzen Yarışı Başladı!';
+      hudTop.querySelector('#r3-st').textContent = raceMode === 'bot' ? '🤖 Bota Karşı Yarış!' : (raceMode === 'local' ? '📱 Aynı Cihazda 2P Yarış!' : '🌐 Online Canlı Yarış!');
     };
-    hudTop.querySelector('#r3-m2p').onclick = () => {
-      vsBot = false;
-      hudTop.querySelector('#r3-m2p').classList.add('active');
-      hudTop.querySelector('#r3-mbot').classList.remove('active');
+    const setRMode = (m) => {
+      raceMode = m;
+      hudTop.querySelector('#r3-m2p').classList.toggle('active', m === 'online');
+      hudTop.querySelector('#r3-mloc').classList.toggle('active', m === 'local');
+      hudTop.querySelector('#r3-mbot').classList.toggle('active', m === 'bot');
+      updateRaceBtns();
       resetRace();
     };
-    hudTop.querySelector('#r3-mbot').onclick = () => {
-      vsBot = true;
-      hudTop.querySelector('#r3-mbot').classList.add('active');
-      hudTop.querySelector('#r3-m2p').classList.remove('active');
-      resetRace();
-      speakText('Bota karşı 3 boyutlu yarış başladı! Kendi arabana hızlıca gaz ver!');
-    };
+    hudTop.querySelector('#r3-m2p').onclick = () => setRMode('online');
+    hudTop.querySelector('#r3-mloc').onclick = () => setRMode('local');
+    hudTop.querySelector('#r3-mbot').onclick = () => setRMode('bot');
 
     controlsBar.querySelector('#r3-g1').onclick = () => pushCar(1);
     controlsBar.querySelector('#r3-g2').onclick = () => pushCar(2);
     controlsBar.querySelector('#r3-rst').onclick = resetRace;
 
     const botTimer = setInterval(() => {
-      if (vsBot && !winner) {
-        // Higher levels make the 3D Bot noticeably faster (Level 1..15)!
+      if (raceMode === 'bot' && !winner) {
         const botChance = Math.min(0.98, 0.35 + currentLevel * 0.045);
         if (Math.random() < botChance) pushCar(myCar === 1 ? 2 : 1, true);
       }
@@ -215,11 +219,11 @@ export function launch3DMiniGame(gameId, container, helpers) {
     onLevelChanged = () => resetRace();
 
     const onK = (e) => {
-      if ((e.key === 'a' || e.key === 'A') && myCar === 1) pushCar(1);
-      if ((e.key === 'l' || e.key === 'L') && myCar === 2) pushCar(2);
+      if ((e.key === 'a' || e.key === 'A') && (raceMode === 'local' || myCar === 1)) pushCar(1);
+      if ((e.key === 'l' || e.key === 'L') && (raceMode === 'local' || myCar === 2)) pushCar(2);
     };
     window.addEventListener('keydown', onK);
-    const offSync = onMultiplayerSync ? onMultiplayerSync((m) => { if (!vsBot && m.type === 'race3d_push') pushCar(m.who, true); }) : null;
+    const offSync = onMultiplayerSync ? onMultiplayerSync((m) => { if (raceMode === 'online' && m.type === 'race3d_push') pushCar(m.who, true); }) : null;
     extraCleanup = () => { clearInterval(botTimer); window.removeEventListener('keydown', onK); if (offSync) offSync(); };
 
     const loop = () => {

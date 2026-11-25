@@ -31,6 +31,7 @@ export class Chess3DGame {
     this.onReward = callbacks.onReward || (() => {});
     this.onSyncMove = callbacks.onSyncMove || (() => {});
     this.getPlayerId = callbacks.getPlayerId || (() => 'umay');
+    this.playMode = 'online'; // 'online' | 'local' | 'bot'
     this.vsBot = false;
     this.board = [];
     this.turn = 'white'; // 'white' = Uppercase (Umay Pembe), 'black' = Lowercase (Yusuf Yeşil)
@@ -84,17 +85,25 @@ export class Chess3DGame {
     }
   }
 
-  setMode(vsBot) {
-    this.vsBot = vsBot;
+  setMode(mode) {
+    if (mode === true) mode = 'bot';
+    if (mode === false) mode = 'online';
+    this.playMode = mode || 'online';
+    this.vsBot = (this.playMode === 'bot');
     const myCol = this.getMyColor();
-    this.reset(!vsBot);
+    this.reset(this.playMode === 'online');
     const b2p = document.getElementById('chess-mode-2p');
+    const bLoc = document.getElementById('chess-mode-local');
     const bBot = document.getElementById('chess-mode-bot');
-    if (b2p) b2p.classList.toggle('active', !vsBot);
-    if (bBot) bBot.classList.toggle('active', vsBot);
-    this.onSpeak(vsBot
+    if (b2p) b2p.classList.toggle('active', this.playMode === 'online');
+    if (bLoc) bLoc.classList.toggle('active', this.playMode === 'local');
+    if (bBot) bBot.classList.toggle('active', this.playMode === 'bot');
+    const msg = this.playMode === 'bot'
       ? `Bota karşı 3 boyutlu satranç başladı! Sen ${myCol === 'white' ? 'Pembe Takımsın' : 'Yeşil Takımsın'}!`
-      : 'İki kuzen canlı satranç başladı! Herkes sadece kendi taşını ve kendi sırasını oynayabilir!');
+      : (this.playMode === 'local'
+        ? 'Aynı cihazda 2 kişilik satranç başladı! Sırayla Pembe ve Yeşil oynayabilir!'
+        : 'Online 2 kuzen canlı satranç başladı! Herkes kendi cihazından kendi taşını oynar!');
+    this.onSpeak(msg);
   }
 
   undo() {
@@ -235,13 +244,13 @@ export class Chess3DGame {
 
   handleCellClick(r, c) {
     if (this.gameOver) return;
-    const myCol = this.getMyColor();
-    const botCol = myCol === 'white' ? 'black' : 'white';
+    const isLocalPass = (this.playMode === 'local');
+    const myCol = isLocalPass ? this.turn : this.getMyColor();
 
-    // STRICT TURN LOCK: Never allow moving out of turn (neither in Bot mode nor in Live 2-Cousin mode!)
-    if (this.turn !== myCol) {
+    // STRICT TURN LOCK in 'online' and 'bot' modes (In 'local' pass-and-play mode, both sides play in turn on same screen!)
+    if (!isLocalPass && this.turn !== myCol) {
       const waitWho = this.vsBot ? 'Bot' : (this.turn === 'white' ? 'Umay (Pembe)' : 'Yusuf (Yeşil)');
-      this.lockHint = `⏳ Sıra ${waitWho}'ta! Lütfen sıranı bekle, başkasının taşını oynayamazsın!`;
+      this.lockHint = `⏳ Sıra ${waitWho}'ta! Lütfen sıranı bekle! (Aynı cihazdaysanız "📱 Aynı Cihaz 2P" seçin!)`;
       this.onSound('moo');
       this.onSpeak(`Şu an sıra ${waitWho} tarafında! Kendi sıranı bekle!`);
       this.render();
@@ -338,7 +347,7 @@ export class Chess3DGame {
     }
 
     this.render();
-    if (!this._applyingRemote && !this.vsBot) {
+    if (!this._applyingRemote && this.playMode === 'online') {
       this.onSyncMove({
         board: this.board,
         turn: this.turn,
@@ -356,7 +365,7 @@ export class Chess3DGame {
   }
 
   applyRemoteState(remote) {
-    if (!remote || !remote.board || this.vsBot) return;
+    if (!remote || !remote.board || this.playMode !== 'online') return;
     this._applyingRemote = true;
     this.board = remote.board;
     this.turn = remote.turn;
@@ -401,7 +410,7 @@ export class Chess3DGame {
     const turnEl = document.getElementById('chess-turn-text');
     const capEl = document.getElementById('chess-captured-text');
     const inCheck = this.isKingInCheck(this.board, this.turn);
-    const myCol = this.getMyColor();
+    const myCol = this.playMode === 'local' ? this.turn : this.getMyColor();
     const isMyTurn = (this.turn === myCol);
 
     if (turnEl) {

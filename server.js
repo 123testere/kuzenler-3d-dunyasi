@@ -18,9 +18,41 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
-// Connected Server-Sent Events (SSE) clients for real-time cousin multiplayer sync
+// Connected Server-Sent Events (SSE) clients + Persistent Ring Buffer for 100% Reliable 2P Online Sync!
 const clients = new Set();
 let SERVER_VERSION = String(Date.now());
+let eventSeq = 0;
+const recentEvents = []; // { seq, data }
+const latestState = {
+  chess: null,
+  xox: null,
+  onlineCousins: []
+};
+
+function recordAndBroadcast(dataObj) {
+  eventSeq++;
+  const enriched = { ...dataObj, _seq: eventSeq };
+  if (dataObj.type === 'chess_sync' && dataObj.chess) latestState.chess = dataObj.chess;
+  if (dataObj.type === 'xox_sync' && dataObj.xox) latestState.xox = dataObj.xox;
+  if (dataObj.type === 'presence_join' && dataObj.name) {
+    if (!latestState.onlineCousins.includes(dataObj.name)) latestState.onlineCousins.push(dataObj.name);
+  }
+  recentEvents.push({ seq: eventSeq, data: enriched });
+  if (recentEvents.length > 150) recentEvents.shift();
+
+  const payload = `data: ${JSON.stringify(enriched)}\n\n`;
+  for (const res of clients) {
+    try {
+      res.write(payload);
+    } catch (e) {
+      clients.delete(res);
+    }
+  }
+}
+
+function broadcastToClients(dataObj) {
+  recordAndBroadcast(dataObj);
+}
 
 // Auto-watch game files so any edit immediately triggers automatic page refresh on all connected devices!
 let watchDebounce = null;
@@ -44,30 +76,43 @@ setInterval(() => {
   }
 }, 25000);
 
-function broadcastToClients(dataObj) {
-  const payload = `data: ${JSON.stringify(dataObj)}\n\n`;
-  for (const res of clients) {
-    try {
-      res.write(payload);
-    } catch (e) {
-      clients.delete(res);
-    }
-  }
-}
-
 const server = http.createServer((req, res) => {
-  // Real-time SSE endpoint for live cousin sync across iPads/tablets
-  if (req.url === '/api/events' && req.method === 'GET') {
+  // CORS preflight support
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning'
+    });
+    return res.end();
+  }
+
+  // Real-time SSE endpoint for live cousin sync across iPads/phones/cities
+  if (req.url.startsWith('/api/events') && req.method === 'GET') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
       'Access-Control-Allow-Origin': '*'
     });
-    res.write(`data: ${JSON.stringify({ type: 'connected', version: SERVER_VERSION })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'connected', version: SERVER_VERSION, seq: eventSeq, latestState })}\n\n`);
     clients.add(res);
     req.on('close', () => clients.delete(res));
     return;
+  }
+
+  // Reliable HTTP Poll fallback (guarantees 2P moves NEVER get lost on mobile 4G / ngrok / Render!)
+  if (req.url.startsWith('/api/poll') && req.method === 'GET') {
+    const u = new URL(req.url, 'http://localhost');
+    const since = parseInt(u.searchParams.get('since') || '0', 10) || 0;
+    const missed = recentEvents.filter(ev => ev.seq > since).map(ev => ev.data);
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*'
+    });
+    return res.end(JSON.stringify({ version: SERVER_VERSION, seq: eventSeq, events: missed, latestState: since === 0 ? latestState : null }));
   }
 
   if (req.url === '/api/version' && req.method === 'GET') {
@@ -75,7 +120,7 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ version: SERVER_VERSION }));
   }
 
-  // Broadcast endpoint when any cousin moves an item, plays XOX, or sends a voice sticker
+  // Broadcast endpoint when any cousin moves a chess piece, plays XOX, races, or sends voice chat
   if (req.url === '/api/sync' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => {
@@ -85,9 +130,9 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const parsed = JSON.parse(body);
-        broadcastToClients(parsed);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
+        recordAndBroadcast(parsed);
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ ok: true, seq: eventSeq }));
       } catch (e) {
         res.writeHead(400);
         res.end('Bad JSON');

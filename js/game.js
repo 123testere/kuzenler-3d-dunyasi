@@ -69,7 +69,7 @@ function sendMultiplayerSync(payload) {
   if (syncChannel) syncChannel.postMessage(packet);
   fetch('/api/sync', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     body: JSON.stringify(packet)
   }).catch(() => {});
 }
@@ -3556,16 +3556,20 @@ function renderMem() {
 }
 
 const XOX_T = { umay: 'assets/umay/plane.png', yusuf: 'assets/sprites/cow.png', deren: 'assets/sprites/baby.png', elif: 'assets/sprites/unicorn.png' };
-let xoxVsBot = false;
+let xoxMode = 'online'; // 'online' | 'local' | 'bot'
 
-window.setXoxMode = (vsBot) => {
-  xoxVsBot = vsBot;
+window.setXoxMode = (mode) => {
+  if (mode === true) mode = 'bot';
+  if (mode === false) mode = 'online';
+  xoxMode = mode || 'online';
   const b2 = document.getElementById('xox-mode-2p');
+  const bl = document.getElementById('xox-mode-local');
   const bb = document.getElementById('xox-mode-bot');
-  if (b2) b2.classList.toggle('active', !vsBot);
-  if (bb) bb.classList.toggle('active', vsBot);
+  if (b2) b2.classList.toggle('active', xoxMode === 'online');
+  if (bl) bl.classList.toggle('active', xoxMode === 'local');
+  if (bb) bb.classList.toggle('active', xoxMode === 'bot');
   window.resetXoxGame();
-  speakText(vsBot ? 'XOX Bota karşı başladı! Sıra sende!' : 'XOX 2 Kuzen canlı başladı! Herkes kendi sırasını beklemeli!');
+  speakText(xoxMode === 'bot' ? 'XOX Bota karşı başladı! Sıra sende!' : (xoxMode === 'local' ? 'Aynı cihazda 2 kişilik XOX başladı!' : 'Online 2 Kuzen XOX başladı! Herkes kendi sırasını beklemeli!'));
 };
 
 function checkXoxWinner(board, whoName) {
@@ -3578,7 +3582,7 @@ function checkXoxWinner(board, whoName) {
 }
 
 function makeXoxBotMove() {
-  if (!xoxVsBot || state.xox.winner || state.xox.turn !== 'p2') return;
+  if (xoxMode !== 'bot' || state.xox.winner || state.xox.turn !== 'p2') return;
   const empties = state.xox.board.map((v, i) => v ? -1 : i).filter(i => i >= 0);
   if (empties.length === 0) return;
   const pick = empties[Math.floor(Math.random() * empties.length)];
@@ -3593,22 +3597,21 @@ function makeXoxBotMove() {
 
 function renderXoxBoard() {
   const b = document.getElementById('xox-board'); if (!b) return; b.innerHTML = '';
-  state.xox.p1 = xoxVsBot ? state.currentPlayer : document.getElementById('xox-p1').value;
-  state.xox.p2 = xoxVsBot ? (state.currentPlayer === 'yusuf' ? 'umay' : 'yusuf') : document.getElementById('xox-p2').value;
+  state.xox.p1 = xoxMode === 'bot' ? state.currentPlayer : document.getElementById('xox-p1').value;
+  state.xox.p2 = xoxMode === 'bot' ? (state.currentPlayer === 'yusuf' ? 'umay' : 'yusuf') : document.getElementById('xox-p2').value;
   const act = state.xox.turn === 'p1' ? state.xox.p1 : state.xox.p2;
-  const isMyTurn = xoxVsBot ? (state.xox.turn === 'p1') : (state.currentPlayer === act);
-  const actName = (xoxVsBot && state.xox.turn === 'p2') ? 'Bot 🤖' : COUSINS[act].name;
+  const isMyTurn = xoxMode === 'local' ? true : (xoxMode === 'bot' ? (state.xox.turn === 'p1') : (state.currentPlayer === act));
+  const actName = (xoxMode === 'bot' && state.xox.turn === 'p2') ? 'Bot 🤖' : COUSINS[act].name;
 
   document.getElementById('xox-turn-label').textContent = state.xox.winner
     ? `🏆 Sonuç: ${state.xox.winner}`
-    : (isMyTurn ? `✅ Sıra SENDE! (${actName})` : `⏳ Sıra ${actName}'ta — Kendi sıranı bekle!`);
+    : (isMyTurn ? `✅ Sıra: ${actName}` : `⏳ Sıra ${actName}'ta — Bekle!`);
 
   state.xox.board.forEach((v, i) => {
     const cell = document.createElement('div'); cell.className = 'xox-cell';
     if (v) cell.innerHTML = `<img src="${XOX_T[v]}" />`;
     cell.onclick = () => {
       if (state.xox.board[i] || state.xox.winner) return;
-      // STRICT TURN LOCK: Never allow playing during opponent's or bot's turn!
       if (!isMyTurn) {
         playSound('moo');
         speakText(`Şu an sıra ${actName} tarafında! Kendi sıranı bekle!`);
@@ -3618,9 +3621,9 @@ function renderXoxBoard() {
       state.xox.winner = checkXoxWinner(state.xox.board, COUSINS[act].name);
       if (!state.xox.winner) state.xox.turn = state.xox.turn === 'p1' ? 'p2' : 'p1';
       else { playSound('win'); addStars(3); speakText(`Tebrikler! ${state.xox.winner} kazandı!`); }
-      if (!xoxVsBot) sendMultiplayerSync({ type: 'xox_sync', xox: state.xox });
+      if (xoxMode === 'online') sendMultiplayerSync({ type: 'xox_sync', xox: state.xox });
       renderXoxBoard();
-      if (xoxVsBot && !state.xox.winner && state.xox.turn === 'p2') {
+      if (xoxMode === 'bot' && !state.xox.winner && state.xox.turn === 'p2') {
         setTimeout(makeXoxBotMove, 500);
       }
     };
@@ -3631,7 +3634,7 @@ window.resetXoxGame = () => {
   state.xox.board = Array(9).fill(null);
   state.xox.turn = 'p1';
   state.xox.winner = null;
-  if (!xoxVsBot) sendMultiplayerSync({ type: 'xox_sync', xox: state.xox });
+  if (xoxMode === 'online') sendMultiplayerSync({ type: 'xox_sync', xox: state.xox });
   renderXoxBoard();
 };
 
@@ -4183,8 +4186,25 @@ function updateRemote3DAvatar(data) {
 }
 
 let clientAppVersion = null;
+let lastProcessedSeq = 0;
+
+function applyInitialServerState(ls) {
+  if (!ls) return;
+  if (ls.chess && chessGame) chessGame.applyRemoteState(ls.chess);
+  if (ls.xox) { state.xox = ls.xox; renderXoxBoard(); }
+  if (Array.isArray(ls.onlineCousins)) {
+    ls.onlineCousins.forEach(n => onlineCousins.add(n));
+    updateOnlineCousinsBadge();
+  }
+}
+
 function handleIncomingSync(payload) {
-  if (!payload || payload.senderClientId === CLIENT_ID) return;
+  if (!payload) return;
+  if (typeof payload._seq === 'number') {
+    if (payload._seq <= lastProcessedSeq) return; // Deduplicate between SSE & Poll!
+    lastProcessedSeq = payload._seq;
+  }
+  if (payload.senderClientId === CLIENT_ID) return;
 
   // Automatic Live Page Update when server restarts, redeploys, or files change!
   if (payload.type === 'connected' && payload.version) {
@@ -4193,6 +4213,8 @@ function handleIncomingSync(payload) {
       return;
     }
     clientAppVersion = payload.version;
+    if (typeof payload.seq === 'number' && payload.seq > lastProcessedSeq) lastProcessedSeq = payload.seq;
+    applyInitialServerState(payload.latestState);
     return;
   }
   if (payload.type === 'reload_page') {
@@ -4258,7 +4280,7 @@ window.addEventListener('DOMContentLoaded', () => {
   applyAutoDeviceLayout();
   window.addEventListener('resize', applyAutoDeviceLayout);
 
-  // Connect to Live LAN/Wi-Fi Server-Sent Events (/api/events) so 2 tablets play together live!
+  // Connect to Live Server-Sent Events (/api/events) + 1.2s Reliable HTTP Poll Fallback (100% 2P Sync over 4G/ngrok/Render!)
   if ('EventSource' in window) {
     try {
       const es = new EventSource('/api/events');
@@ -4267,4 +4289,25 @@ window.addEventListener('DOMContentLoaded', () => {
       };
     } catch (e) {}
   }
+
+  // Reliable HTTP Poll fallback so 2-player moves NEVER get dropped even if mobile 4G/ngrok buffers SSE!
+  setInterval(() => {
+    fetch(`/api/poll?since=${lastProcessedSeq}`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.version && clientAppVersion && clientAppVersion !== data.version) {
+          window.location.reload();
+          return;
+        }
+        if (data.version && !clientAppVersion) clientAppVersion = data.version;
+        if (data.latestState) applyInitialServerState(data.latestState);
+        if (Array.isArray(data.events)) {
+          data.events.forEach(ev => handleIncomingSync(ev));
+        }
+      })
+      .catch(() => {});
+  }, 1200);
 });
